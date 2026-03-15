@@ -17,14 +17,16 @@ export const getProjectState = defineQuery("getProjectState");
 
 export async function projectWorkflow(state = {
   projectId: null,
+  projectName: "Unknown",
   status: "ACTIVE"
 }) {
 
-  let { projectId, status } = state;
+  let { projectId, projectName, status } = state;
   let shouldContinueAsNew = false;
 
   setHandler(getProjectState, () => ({
     projectId,
+    projectName,
     status
   }));
 
@@ -34,7 +36,7 @@ export async function projectWorkflow(state = {
       return { status };
     }
 
-    await activities.updateProjectStatus(projectId, newStatus);
+    await activities.saveProject(projectId, projectName, newStatus);
 
     status = newStatus;
 
@@ -59,6 +61,7 @@ export async function projectWorkflow(state = {
 
     await continueAsNew({
         projectId,
+        projectName,
         status,
       });
   }

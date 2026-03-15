@@ -5,21 +5,26 @@ import {
   Connection,
   WithStartWorkflowOperation
 } from "@temporalio/client";
+import dotenv from "dotenv";
 
-const connection = await Connection.connect();
+dotenv.config();
+
+const connection = await Connection.connect({
+  address: `${process.env.TEMPORAL_HOST || "localhost"}:${process.env.TEMPORAL_PORT || 7233}`
+});
 
 const client = new Client({
   connection,
-  namespace: "issue-system"
+  namespace: process.env.TEMPORAL_NAMESPACE || "issue-system"
 });
 
 const app = express();
 app.use(express.json());
 
 /*
---------------------------------
-ISSUES
---------------------------------
+────────────────────────────
+ISSUES ENDPOINTS
+────────────────────────────
 */
 
 app.post("/issues", async (req, res) => {
@@ -83,9 +88,9 @@ app.get("/issues/:id/comments", async (req, res) => {
 });
 
 /*
---------------------------------
-PROJECTS
---------------------------------
+────────────────────────────
+PROJECTS ENDPOINTS
+────────────────────────────
 */
 
 app.post("/projects", async (req, res) => {
