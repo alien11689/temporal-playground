@@ -53,6 +53,7 @@ This script:
 #### 3. Install dependencies
 
 ```bash
+cd backend
 npm install
 ```
 
@@ -62,6 +63,7 @@ You'll need **two terminal windows** — one for the API and one for the worker.
 
 **Terminal 1 - Start the API:**
 ```bash
+cd backend
 npm run api
 ```
 
@@ -72,6 +74,7 @@ API running on :3000
 
 **Terminal 2 - Start the worker:**
 ```bash
+cd backend
 npm run worker
 ```
 
@@ -115,15 +118,17 @@ Open **http://localhost:8080** in your browser to see:
 
 #### Stopping everything
 
-In the terminals running `npm run api` and `npm run worker`, press `Ctrl+C` to stop the worker and API server.
+In the terminals running the API and worker, press `Ctrl+C` to stop them.
 
 Then stop Docker services:
 ```bash
+cd backend
 docker compose down
 ```
 
 To also remove database data:
 ```bash
+cd backend
 docker compose down -v
 ```
 
@@ -334,12 +339,14 @@ If you want to run PostgreSQL and Temporal locally (not in Docker), you'll need 
 # (Instructions vary by OS)
 
 # Create the temporal_demo database and run init.sql
+cd backend
 psql -U postgres -f init.sql
 
 # Update .env with your local Temporal address
 # (adjust TEMPORAL_HOST if needed)
 
 # Start the worker and API (in separate terminals)
+cd backend
 npm run api    # Terminal 1
 npm run worker # Terminal 2
 ```
@@ -350,25 +357,24 @@ This is more complicated than the recommended Docker setup, so we suggest using 
 
 ```
 .
-├── docker-compose.yml           # Infrastructure: postgres, temporal, ui
-├── init.sql                     # Database schema
-├── .env                         # Environment variables (localhost defaults)
-├── .env.example                 # Template for .env
+├── backend/
+│   ├── docker-compose.yml           # Infrastructure: postgres, temporal, ui
+│   ├── init.sql                     # Database schema
+│   ├── configureTemporal.sh         # Temporal namespace & search attributes setup
+│   ├── demo.sh                      # Demo workflow execution script
+│   │
+│   ├── index.js                     # Express API server
+│   ├── worker.js                    # Temporal worker + database pool
+│   ├── activities.js                # Activity implementations (DB operations)
+│   │
+│   ├── issueWorkflow.js             # Issue workflow definition
+│   ├── projectWorkflow.js           # Project workflow definition
+│   │
+│   └── package.json                 # Node.js dependencies & scripts
 │
-├── configureTemporal.sh         # Temporal namespace & search attributes setup
-├── demo.sh                      # Demo workflow execution script
-│
-├── index.js                     # Express API server
-├── worker.js                    # Temporal worker + database pool
-├── activities.js                # Activity implementations (DB operations)
-│
-├── issueWorkflow.js             # Issue workflow definition
-├── projectWorkflow.js           # Project workflow definition
-│
-├── package.json                 # Node.js dependencies & scripts
-├── node_modules/                # Installed packages
-│
-└── README.md                    # This file
+├── .env                             # Environment variables (localhost defaults)
+├── .env.example                     # Template for .env
+└── README.md                        # This file
 ```
 
 ## 🔍 Monitoring and Debugging
@@ -376,6 +382,7 @@ This is more complicated than the recommended Docker setup, so we suggest using 
 ### Check Docker service status
 
 ```bash
+cd backend
 docker compose ps
 ```
 
@@ -385,6 +392,7 @@ Should show postgres, temporal, and temporal-ui running.
 
 ```bash
 # All services
+cd backend
 docker compose logs -f
 
 # Specific service
@@ -399,6 +407,7 @@ The worker and API logs appear in the terminals where you ran `npm run worker` a
 ### Connect to PostgreSQL
 
 ```bash
+cd backend
 docker compose exec postgres psql -U postgres -d temporal_demo
 ```
 
@@ -412,6 +421,7 @@ SELECT * FROM comments WHERE issue_id = '<issue-id>';
 ### Check Temporal namespace
 
 ```bash
+cd backend
 docker compose exec temporal temporal operator namespace list
 ```
 
@@ -430,6 +440,7 @@ Head to **http://localhost:8080** and browse:
 
 Check Temporal logs:
 ```bash
+cd backend
 docker compose logs temporal
 ```
 
@@ -442,6 +453,7 @@ Common issues:
 
 ```bash
 # Verify Temporal is running
+cd backend
 docker compose ps
 
 # Check if port 7233 is accessible
@@ -455,6 +467,7 @@ docker compose logs temporal
 
 ```bash
 # Test PostgreSQL connectivity
+cd backend
 docker compose exec postgres pg_isready -U postgres
 
 # Check database was created
@@ -496,11 +509,13 @@ curl http://localhost:3000/projects
 
 Stop everything:
 ```bash
+cd backend
 docker compose down
 ```
 
 Stop everything and nuke the database:
 ```bash
+cd backend
 docker compose down -v
 ```
 
