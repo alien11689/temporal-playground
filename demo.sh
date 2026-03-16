@@ -11,24 +11,24 @@ export PROJECT_ID=$(echo $PROJECT_RESPONSE | jq -r '.projectId')
 echo "PROJECT_ID=$PROJECT_ID"
 
 
-echo "=== CREATE ISSUE ==="
+echo "=== CREATE ISSUE #1 ==="
 
-ISSUE_RESPONSE=$(curl -s -X POST $API/issues \
+ISSUE1_RESPONSE=$(curl -s -X POST $API/issues \
   -H "content-type: application/json" \
   -d "{
     \"author\": \"alice\",
     \"projectId\": \"$PROJECT_ID\",
-    \"title\": \"Example issue\"
+    \"title\": \"First issue - will be closed manually\"
 }")
 
-export ISSUE_ID=$(echo $ISSUE_RESPONSE | jq -r '.workflowId')
+export ISSUE1_ID=$(echo $ISSUE1_RESPONSE | jq -r '.workflowId')
 
-echo "ISSUE_ID=$ISSUE_ID"
+echo "ISSUE1_ID=$ISSUE1_ID"
 
 
-echo "=== ADD COMMENT ==="
+echo "=== ADD COMMENT TO ISSUE #1 ==="
 
-curl -s -X POST $API/issues/$ISSUE_ID/comments \
+curl -s -X POST $API/issues/$ISSUE1_ID/comments \
   -H "content-type: application/json" \
   -d '{
     "author": "bob",
@@ -36,47 +36,111 @@ curl -s -X POST $API/issues/$ISSUE_ID/comments \
 }' | jq
 
 
-echo "=== CHANGE ISSUE STATUS ==="
+echo "=== CHANGE ISSUE #1 STATUS TO PROCESSING ==="
 
-curl -s -X POST $API/issues/$ISSUE_ID/status \
+curl -s -X POST $API/issues/$ISSUE1_ID/status \
   -H "content-type: application/json" \
   -d '{"status":"PROCESSING"}' | jq
 
 
-echo "=== GET ISSUE STATUS ==="
+echo "=== GET ISSUE #1 STATUS ==="
 
-curl -s $API/issues/$ISSUE_ID/status | jq
+curl -s $API/issues/$ISSUE1_ID/status | jq
 
 
-echo "=== ADD SECOND COMMENT ==="
+echo "=== ADD SECOND COMMENT TO ISSUE #1 ==="
 
-curl -s -X POST $API/issues/$ISSUE_ID/comments \
+curl -s -X POST $API/issues/$ISSUE1_ID/comments \
   -H "content-type: application/json" \
   -d '{
     "author": "charlie",
     "message": "Investigating deeper"
 }' | jq
 
-echo "=== CHANGE PROJECT STATUS ==="
+
+echo "=== CLOSE ISSUE #1 MANUALLY (FINISHED) ==="
+
+curl -s -X POST $API/issues/$ISSUE1_ID/status \
+  -H "content-type: application/json" \
+  -d '{"status":"FINISHED"}' | jq
+
+
+echo "=== CREATE ISSUE #2 (will be batch-closed) ==="
+
+ISSUE2_RESPONSE=$(curl -s -X POST $API/issues \
+  -H "content-type: application/json" \
+  -d "{
+    \"author\": \"alice\",
+    \"projectId\": \"$PROJECT_ID\",
+    \"title\": \"Second issue - will be batch closed\"
+}")
+
+export ISSUE2_ID=$(echo $ISSUE2_RESPONSE | jq -r '.workflowId')
+
+echo "ISSUE2_ID=$ISSUE2_ID"
+
+
+echo "=== CREATE ISSUE #3 (will be batch-closed) ==="
+
+ISSUE3_RESPONSE=$(curl -s -X POST $API/issues \
+  -H "content-type: application/json" \
+  -d "{
+    \"author\": \"alice\",
+    \"projectId\": \"$PROJECT_ID\",
+    \"title\": \"Third issue - will be batch closed\"
+}")
+
+export ISSUE3_ID=$(echo $ISSUE3_RESPONSE | jq -r '.workflowId')
+
+echo "ISSUE3_ID=$ISSUE3_ID"
+
+
+echo "=== GET ISSUE #2 STATUS BEFORE PROJECT CLOSE ==="
+
+curl -s $API/issues/$ISSUE2_ID/status | jq
+
+
+echo "=== GET ISSUE #3 STATUS BEFORE PROJECT CLOSE ==="
+
+curl -s $API/issues/$ISSUE3_ID/status | jq
+
+
+echo "=== CHANGE PROJECT STATUS TO DEPRECATED ==="
 
 curl -s -X POST $API/projects/$PROJECT_ID/status \
   -H "content-type: application/json" \
   -d '{"status":"DEPRECATED"}' | jq
 
-echo "=== DEACTIVATE PROJECT (CLOSE ISSUES) ==="
+
+echo "=== DEACTIVATE PROJECT (BATCH CLOSE ISSUES #2 and #3) ==="
 
 curl -s -X POST $API/projects/$PROJECT_ID/status \
   -H "content-type: application/json" \
   -d '{"status":"INACTIVE"}' | jq
 
-echo "=== GET PROJECT STATE ==="
+
+echo "=== GET PROJECT STATE AFTER DEACTIVATION ==="
 
 curl -s $API/projects/$PROJECT_ID | jq
 
-echo "=== ISSUE STATUS AFTER PROJECT CLOSE ==="
 
-curl -s $API/issues/$ISSUE_ID/status | jq
+echo ""
+echo "=== VERIFICATION: CHECK ALL ISSUE STATUSES ==="
+echo ""
 
+echo "ISSUE #1 STATUS (should be FINISHED):"
+curl -s $API/issues/$ISSUE1_ID/status | jq
+
+echo ""
+echo "ISSUE #2 STATUS (should be REJECTED due to batch operation):"
+curl -s $API/issues/$ISSUE2_ID/status | jq
+
+echo ""
+echo "ISSUE #3 STATUS (should be REJECTED due to batch operation):"
+curl -s $API/issues/$ISSUE3_ID/status | jq
+
+
+echo ""
 echo "=== REACTIVATE PROJECT ==="
 
 curl -s -X POST $API/projects/$PROJECT_ID/status \

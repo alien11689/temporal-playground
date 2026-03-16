@@ -1,4 +1,4 @@
-import { Client } from "@temporalio/client";
+import { Client, Connection } from "@temporalio/client";
 import { Pool } from "pg";
 
 let dbPool = null;
@@ -155,26 +155,48 @@ export async function updateProjectStatus(projectId, status) {
 }
 
 export async function signalProjectIssues(projectId) {
-  const client = new Client({
-    namespace: "issue-system"
-  });
+  let connection = null;
 
-  const query =
-    `ProjectId="${projectId}" AND ` +
-    `IssueStatus!="FINISHED" AND IssueStatus!="REJECTED"`;
+  try {
+    connection = await Connection.connect({
+      address: `${process.env.TEMPORAL_HOST || "localhost"}:${process.env.TEMPORAL_PORT || 7233}`
+    });
 
-  const workflows = client.workflow.list({ query });
+    const workflowService = connection.workflowService;
+    const namespace = process.env.TEMPORAL_NAMESPACE || "issue-system";
 
-  for await (const wf of workflows) {
-    try {
-      const handle = client.workflow.getHandle(wf.workflowId);
+    // Visibility query: wszystkie aktywne issues projektu
+    const visibilityQuery = 
+      `ProjectId="${projectId}" AND ` +
+      `IssueStatus!="FINISHED" AND IssueStatus!="REJECTED"`;
 
-      console.log("Sending change status to REJECTED to ", wf.workflowId);
-      await handle.signal("closeIssue", "REJECTED");
-      console.log("Sent");
+    console.log(`[BatchSignal] Starting batch operation for project ${projectId}`);
+    console.log(`[BatchSignal] Query: ${visibilityQuery}`);
 
-    } catch (err) {
-      console.log("signal failed", err.message);
+    // Temporal Batch API - wysyła sygnały na serwerze
+    const response = await workflowService.startBatchOperation({
+      namespace,
+      visibilityQuery,
+      signalOperation: {
+        signal: "closeIssue",
+      },
+      reason: `Project ${projectId} deactivation: closing all open issues`,
+      jobId: `batch-close-${projectId}-${Date.now()}`
+    });
+
+    console.log(`[BatchSignal] Batch operation submitted with jobId: ${response.jobId}`);
+    
+    return {
+      ok: true,
+      jobId: response.jobId
+    };
+
+  } catch (error) {
+    console.error(`[BatchSignal] Failed to start batch operation: ${error.message}`);
+    throw error;
+  } finally {
+    if (connection) {
+      await connection.close();
     }
   }
 }

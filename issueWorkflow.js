@@ -61,8 +61,10 @@ export async function issueWorkflow(state = {
   });
 
   setHandler(closeIssue, async (newStatus) => {
-    console.log("Received close issue signal: ", newStatus);
-    status = newStatus;
+    // If newStatus is undefined (batch operation without parameters), default to REJECTED
+    const finalStatus = newStatus !== undefined ? newStatus : "REJECTED";
+    console.log("Received close issue signal with status: ", finalStatus);
+    status = finalStatus;
 
     upsertSearchAttributes({
       IssueStatus: [status]

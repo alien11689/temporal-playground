@@ -41,7 +41,8 @@ export async function projectWorkflow(state = {
     status = newStatus;
 
     if (status === "INACTIVE") {
-      await activities.signalProjectIssues(projectId);
+      const result = await activities.signalProjectIssues(projectId);
+      console.log(`[ProjectDeactivation] Batch operation for ${projectId} submitted with jobId: ${result.jobId}`);
     }
 
     if (workflowInfo().historyLength > 30) {
