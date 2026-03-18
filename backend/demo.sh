@@ -6,7 +6,7 @@ echo "=== CREATE PROJECT ==="
 
 PROJECT_RESPONSE=$(curl -s -X POST $API/projects)
 
-export PROJECT_ID=$(echo $PROJECT_RESPONSE | jq -r '.projectId')
+export PROJECT_ID=$(echo $PROJECT_RESPONSE | jq -r '.id')
 
 echo "PROJECT_ID=$PROJECT_ID"
 
@@ -21,7 +21,7 @@ ISSUE1_RESPONSE=$(curl -s -X POST $API/issues \
     \"title\": \"First issue - will be closed manually\"
 }")
 
-export ISSUE1_ID=$(echo $ISSUE1_RESPONSE | jq -r '.workflowId')
+export ISSUE1_ID=$(echo $ISSUE1_RESPONSE | jq -r '.id')
 
 echo "ISSUE1_ID=$ISSUE1_ID"
 
@@ -75,7 +75,7 @@ ISSUE2_RESPONSE=$(curl -s -X POST $API/issues \
     \"title\": \"Second issue - will be batch closed\"
 }")
 
-export ISSUE2_ID=$(echo $ISSUE2_RESPONSE | jq -r '.workflowId')
+export ISSUE2_ID=$(echo $ISSUE2_RESPONSE | jq -r '.id')
 
 echo "ISSUE2_ID=$ISSUE2_ID"
 
@@ -90,7 +90,7 @@ ISSUE3_RESPONSE=$(curl -s -X POST $API/issues \
     \"title\": \"Third issue - will be batch closed\"
 }")
 
-export ISSUE3_ID=$(echo $ISSUE3_RESPONSE | jq -r '.workflowId')
+export ISSUE3_ID=$(echo $ISSUE3_RESPONSE | jq -r '.id')
 
 echo "ISSUE3_ID=$ISSUE3_ID"
 

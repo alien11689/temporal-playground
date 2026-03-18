@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "api": "node index.js",
-    "worker": "node worker.js"
+    "api": "tsx src/index.ts",
+    "worker": "tsx src/worker.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "start:worker": "node dist/worker.js"
   },
   "dependencies": {
     "@temporalio/client": "^1.10.0",
@@ -14,5 +17,13 @@
     "express": "^4.19.2",
     "pg": "^8.11.3",
     "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "@types/pg": "^8.10.9",
+    "@types/uuid": "^9.0.7",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3"
   }
 }
