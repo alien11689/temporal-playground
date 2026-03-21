@@ -23,14 +23,27 @@ async function run(): Promise<void> {
   let retries = 0;
   const maxRetries = 30;
   let issuesWorker: Worker | undefined;
-  let projectWorker: Worker;
+  let projectWorker: Worker | undefined;
+
+  const shutdownWorkers = async () => {
+    console.log('Shutting down workers...');
+    if (issuesWorker) await issuesWorker.shutdown();
+    if (projectWorker) await projectWorker.shutdown();
+    await pool.end();
+    console.log('Shutdown complete.');
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdownWorkers);
+  process.on('SIGTERM', shutdownWorkers);
   
   while (retries < maxRetries) {
     try {
       issuesWorker = await Worker.create({
         workflowsPath: new URL('./workflows/issueWorkflow.ts', import.meta.url).pathname,
         taskQueue: 'issues',
-        namespace: process.env.TEMPORAL_NAMESPACE || 'issue-system'
+        namespace: process.env.TEMPORAL_NAMESPACE || 'issue-system',
+        gracefulShutdownTimeout: 1
       });
       console.log('Connected to Temporal successfully!');
       break;
@@ -49,7 +62,8 @@ async function run(): Promise<void> {
     workflowsPath: new URL('./workflows/projectWorkflow.ts', import.meta.url).pathname,
     activities,
     taskQueue: 'projects',
-    namespace: process.env.TEMPORAL_NAMESPACE || 'issue-system'
+    namespace: process.env.TEMPORAL_NAMESPACE || 'issue-system',
+    gracefulShutdownTimeout: 5000
   });
 
   await Promise.all([
@@ -62,10 +76,4 @@ run().catch((err) => {
   console.error(err);
   pool.end();
   process.exit(1);
-});
-
-process.on('SIGINT', async () => {
-  console.log('Shutting down worker...');
-  await pool.end();
-  process.exit(0);
 });

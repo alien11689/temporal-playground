@@ -7,7 +7,11 @@
     "worker": "tsx src/worker.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "start:worker": "node dist/worker.js"
+    "start:worker": "node dist/worker.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:all": "./run-tests.sh"
   },
   "dependencies": {
     "@temporalio/client": "^1.10.0",
@@ -20,9 +24,14 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
     "@types/node": "^20.10.0",
     "@types/pg": "^8.10.9",
+    "@types/supertest": "^6.0.2",
     "@types/uuid": "^9.0.7",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "ts-jest": "^29.1.1",
     "tsx": "^4.21.0",
     "typescript": "^5.3.3"
   }
