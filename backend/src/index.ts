@@ -5,6 +5,8 @@ import {
   Connection
 } from '@temporalio/client';
 import dotenv from 'dotenv';
+import { pool } from './db/index.js';
+import { getProjects, getProjectById, getIssues } from './db/queries.js';
 
 dotenv.config();
 
@@ -23,6 +25,21 @@ const client = new Client({
 const app = express();
 app.use(express.json());
 
+function isValidUUID(id: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
+function parseIntParam(value: string | undefined, defaultValue: number): { value: number; valid: boolean } {
+  if (value === undefined) return { value: defaultValue, valid: true };
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) return { value: 0, valid: false };
+  return { value: parsed, valid: true };
+}
+
+const VALID_PROJECT_SORT_COLUMNS = ['name', 'created_at', 'updated_at', 'status'];
+const VALID_ISSUE_SORT_COLUMNS = ['title', 'created_at', 'updated_at', 'status'];
+
 /*
 ────────────────────────────
 ISSUES ENDPOINTS
@@ -30,6 +47,21 @@ ISSUES ENDPOINTS
 */
 
 app.post('/issues', async (req, res) => {
+
+  const body = req.body;
+  
+  if (!body || Object.keys(body).length === 0) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required fields' });
+  }
+  if (!body.title || (typeof body.title === 'string' && body.title.trim() === '')) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: title' });
+  }
+  if (!body.author || (typeof body.author === 'string' && body.author.trim() === '')) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: author' });
+  }
+  if (!body.projectId || (typeof body.projectId === 'string' && body.projectId.trim() === '')) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: projectId' });
+  }
 
   const id = uuidv4();
   const workflowId = issueWorkflowPrefix(id);
@@ -49,44 +81,151 @@ app.post('/issues', async (req, res) => {
   });
 });
 
+app.get('/issues', async (req, res) => {
+  const pageResult = parseIntParam(req.query.page as string, 1);
+  const limitResult = parseIntParam(req.query.limit as string, 20);
+  const sortBy = req.query.sortBy as string | undefined;
+  const order = req.query.order as string | undefined;
+  const projectId = req.query.projectId as string | undefined;
+  const status = req.query.status as string | undefined;
+  const author = req.query.author as string | undefined;
+
+  if (!pageResult.valid) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid page parameter' });
+  }
+  if (pageResult.value < 1) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid page parameter' });
+  }
+
+  if (!limitResult.valid) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid limit parameter' });
+  }
+  if (limitResult.value < 1) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid limit parameter' });
+  }
+
+  if (sortBy && !VALID_ISSUE_SORT_COLUMNS.includes(sortBy)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid sortBy column' });
+  }
+
+  if (order && !['asc', 'desc', 'ASC', 'DESC'].includes(order)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid order parameter' });
+  }
+
+  try {
+    const result = await getIssues({
+      page: pageResult.value,
+      limit: limitResult.value,
+      sortBy: sortBy as any,
+      order: order as any,
+      projectId: projectId || undefined,
+      status: status || undefined,
+      author: author || undefined
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching issues:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Error fetching issues' });
+  }
+});
+
 app.post('/issues/:id/comments', async (req, res) => {
 
-  const handle = client.workflow.getHandle(issueWorkflowPrefix(req.params.id));
+  if (!isValidUUID(req.params.id)) {
+    return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
+  }
 
-  const result = await handle.executeUpdate('addComment', {
-    args: [req.body]
-  });
+  const body = req.body;
+  if (!body || Object.keys(body).length === 0) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Request body is required' });
+  }
+  if (!body.author || (typeof body.author === 'string' && body.author.trim() === '')) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: author' });
+  }
+  if (!body.message || (typeof body.message === 'string' && body.message.trim() === '')) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: message' });
+  }
 
-  res.json(result);
+  try {
+    const handle = client.workflow.getHandle(issueWorkflowPrefix(req.params.id));
+    const result = await handle.executeUpdate('addComment', {
+      args: [body]
+    });
+    res.json(result);
+  } catch (error: any) {
+    if (error.message?.includes('NotFound') || error.message?.includes('not found')) {
+      return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
+    }
+    console.error('Error adding comment:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Error adding comment' });
+  }
 });
 
 app.post('/issues/:id/status', async (req, res) => {
 
-  const handle = client.workflow.getHandle(issueWorkflowPrefix(req.params.id));
+  if (!isValidUUID(req.params.id)) {
+    return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
+  }
 
-  const result = await handle.executeUpdate('changeStatus', {
-    args: [req.body.status]
-  });
+  const body = req.body;
+  if (body === undefined || body === null || (typeof body === 'object' && Object.keys(body).length === 0)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: status' });
+  }
+  if (body.status === undefined || body.status === null || (typeof body.status === 'string' && body.status.trim() === '')) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: status' });
+  }
 
-  res.json({ status: result });
+  try {
+    const handle = client.workflow.getHandle(issueWorkflowPrefix(req.params.id));
+    const result = await handle.executeUpdate('changeStatus', {
+      args: [body.status]
+    });
+    res.json({ status: result });
+  } catch (error: any) {
+    if (error.message?.includes('NotFound') || error.message?.includes('not found')) {
+      return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
+    }
+    console.error('Error updating issue status:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Error updating issue status' });
+  }
 });
 
 app.get('/issues/:id/status', async (req, res) => {
 
-  const handle = client.workflow.getHandle(issueWorkflowPrefix(req.params.id));
+  if (!isValidUUID(req.params.id)) {
+    return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
+  }
 
-  const result = await handle.query('getStatus');
-
-  res.json({ status: result });
+  try {
+    const handle = client.workflow.getHandle(issueWorkflowPrefix(req.params.id));
+    const result = await handle.query('getStatus');
+    res.json({ status: result });
+  } catch (error: any) {
+    if (error.message?.includes('NotFound') || error.message?.includes('not found')) {
+      return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
+    }
+    console.error('Error getting issue status:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Error getting issue status' });
+  }
 });
 
 app.get('/issues/:id/comments', async (req, res) => {
 
-  const handle = client.workflow.getHandle(issueWorkflowPrefix(req.params.id));
+  if (!isValidUUID(req.params.id)) {
+    return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
+  }
 
-  const result = await handle.query('getComments');
-
-  res.json({ comments: result });
+  try {
+    const handle = client.workflow.getHandle(issueWorkflowPrefix(req.params.id));
+    const result = await handle.query('getComments');
+    res.json({ comments: result });
+  } catch (error: any) {
+    if (error.message?.includes('NotFound') || error.message?.includes('not found')) {
+      return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
+    }
+    console.error('Error getting comments:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Error getting comments' });
+  }
 });
 
 /*
@@ -105,32 +244,114 @@ app.post('/projects', async (req, res) => {
     args: [{ projectId: id }]
   } as any);
 
+  try {
+    await pool.query(
+      `INSERT INTO projects (id, name, status, created_at, updated_at)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       ON CONFLICT (id) DO NOTHING`,
+      [id, 'New Project', 'ACTIVE']
+    );
+  } catch (error) {
+    console.error('Error saving project to DB:', error);
+  }
+
   res.json({
     id,
     workflowId: projectWorkflowPrefix(id)
   });
 });
 
-app.post('/projects/:id/status', async (req, res) => {
+app.get('/projects', async (req, res) => {
+  const pageResult = parseIntParam(req.query.page as string, 1);
+  const limitResult = parseIntParam(req.query.limit as string, 20);
+  const sortBy = req.query.sortBy as string | undefined;
+  const order = req.query.order as string | undefined;
+  const status = req.query.status as string | undefined;
 
-  const handle = client.workflow.getHandle(projectWorkflowPrefix(req.params.id));
+  if (!pageResult.valid) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid page parameter' });
+  }
+  if (pageResult.value < 1) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid page parameter' });
+  }
 
-  const result = await handle.executeUpdate('changeProjectStatus', {
-    args: [req.body.status]
-  });
+  if (!limitResult.valid) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid limit parameter' });
+  }
+  if (limitResult.value < 1) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid limit parameter' });
+  }
 
-  res.json(result);
+  if (sortBy && !VALID_PROJECT_SORT_COLUMNS.includes(sortBy)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid sortBy column' });
+  }
+
+  if (order && !['asc', 'desc', 'ASC', 'DESC'].includes(order)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid order parameter' });
+  }
+
+  try {
+    const result = await getProjects({
+      page: pageResult.value,
+      limit: limitResult.value,
+      sortBy: sortBy as any,
+      order: order as any,
+      status: status || undefined
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Error fetching projects' });
+  }
 });
 
 app.get('/projects/:id', async (req, res) => {
 
-  const handle = client.workflow.getHandle(projectWorkflowPrefix(req.params.id));
+  if (!isValidUUID(req.params.id)) {
+    return res.status(404).json({ error: 'Not Found', message: 'Project not found' });
+  }
 
-  const state = await handle.query('getProjectState');
+  try {
+    const project = await getProjectById(req.params.id);
 
-  res.json(state);
+    if (!project) {
+      return res.status(404).json({ error: 'Not Found', message: 'Project not found' });
+    }
+
+    res.json(project);
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Error fetching project' });
+  }
 });
 
-app.listen(3000, () => {
-  console.log('API running on :3000');
+app.post('/projects/:id/status', async (req, res) => {
+
+  if (!isValidUUID(req.params.id)) {
+    return res.status(404).json({ error: 'Not Found', message: 'Project not found' });
+  }
+
+  const body = req.body;
+  if (body === undefined || body === null || (typeof body === 'object' && Object.keys(body).length === 0)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: status' });
+  }
+  if (body.status === undefined || body.status === null || (typeof body.status === 'string' && body.status.trim() === '')) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Missing required field: status' });
+  }
+
+  try {
+    const handle = client.workflow.getHandle(projectWorkflowPrefix(req.params.id));
+    const result = await handle.executeUpdate('changeProjectStatus', {
+      args: [body.status]
+    });
+    res.json(result);
+  } catch (error: any) {
+    if (error.message?.includes('NotFound') || error.message?.includes('not found')) {
+      return res.status(404).json({ error: 'Not Found', message: 'Project not found' });
+    }
+    console.error('Error updating project status:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: 'Error updating project status' });
+  }
 });
+
+export { app };
