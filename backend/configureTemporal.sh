@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 # Colours for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -36,30 +34,35 @@ if [ $attempt -eq $max_attempts ]; then
 fi
 
 # Give it a moment to fully initialise
-sleep 5
+sleep 10
 
-echo -e "${YELLOW}Creating namespace: $NAMESPACE${NC}"
-docker compose exec temporal temporal operator namespace create $NAMESPACE --address temporal:${TEMPORAL_PORT}
+echo -e "${YELLOW}Setting up namespace: $NAMESPACE${NC}"
+result=$(docker compose exec temporal temporal operator namespace create $NAMESPACE --address temporal:${TEMPORAL_PORT} 2>&1 || true)
+if echo "$result" | grep -q "already exists"; then
+  echo -e "${GREEN}Namespace $NAMESPACE already exists${NC}"
+else
+  echo -e "${GREEN}Namespace $NAMESPACE created${NC}"
+fi
 
 echo -e "${YELLOW}Setting up search attributes...${NC}"
-docker compose exec temporal temporal operator search-attribute create \
-  --namespace $NAMESPACE \
-  --name ProjectId \
-  --type Keyword \
-  --address temporal:${TEMPORAL_PORT}
+for attr in "ProjectId:Keyword" "IssueAuthor:Keyword" "IssueStatus:Keyword"; do
+  name=$(echo $attr | cut -d: -f1)
+  type=$(echo $attr | cut -d: -f2)
+  result=$(docker compose exec temporal temporal operator search-attribute create \
+    --namespace $NAMESPACE \
+    --name $name \
+    --type $type \
+    --address temporal:${TEMPORAL_PORT} 2>&1 || true)
+  if echo "$result" | grep -q "already exists"; then
+    echo "Search attribute '$name' already exists"
+  elif echo "$result" | grep -q "Successfully"; then
+    echo "Search attribute '$name' created"
+  else
+    echo "$result"
+  fi
+done
 
-docker compose exec temporal temporal operator search-attribute create \
-  --namespace $NAMESPACE \
-  --name IssueAuthor \
-  --type Keyword \
-  --address temporal:${TEMPORAL_PORT}
-
-docker compose exec temporal temporal operator search-attribute create \
-  --namespace $NAMESPACE \
-  --name IssueStatus \
-  --type Keyword \
-  --address temporal:${TEMPORAL_PORT}
-
+echo ""
 echo -e "${GREEN}All done! Temporal's configured and ready to roll.${NC}"
 echo -e "${GREEN}Temporal UI: http://localhost:8080${NC}"
 echo -e "${GREEN}Temporal gRPC: ${TEMPORAL_HOST}:${TEMPORAL_PORT}${NC}"

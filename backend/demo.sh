@@ -4,7 +4,7 @@ API=http://localhost:3000
 
 echo "=== CREATE PROJECT ==="
 
-PROJECT_RESPONSE=$(curl -s -X POST $API/projects)
+PROJECT_RESPONSE=$(curl -s -X POST $API/api/projects)
 
 export PROJECT_ID=$(echo $PROJECT_RESPONSE | jq -r '.id')
 
@@ -13,7 +13,7 @@ echo "PROJECT_ID=$PROJECT_ID"
 
 echo "=== CREATE ISSUE #1 ==="
 
-ISSUE1_RESPONSE=$(curl -s -X POST $API/issues \
+ISSUE1_RESPONSE=$(curl -s -X POST $API/api/issues \
   -H "content-type: application/json" \
   -d "{
     \"author\": \"alice\",
@@ -28,7 +28,7 @@ echo "ISSUE1_ID=$ISSUE1_ID"
 
 echo "=== ADD COMMENT TO ISSUE #1 ==="
 
-curl -s -X POST $API/issues/$ISSUE1_ID/comments \
+curl -s -X POST $API/api/issues/$ISSUE1_ID/comments \
   -H "content-type: application/json" \
   -d '{
     "author": "bob",
@@ -38,19 +38,19 @@ curl -s -X POST $API/issues/$ISSUE1_ID/comments \
 
 echo "=== CHANGE ISSUE #1 STATUS TO PROCESSING ==="
 
-curl -s -X POST $API/issues/$ISSUE1_ID/status \
+curl -s -X POST $API/api/issues/$ISSUE1_ID/status \
   -H "content-type: application/json" \
   -d '{"status":"PROCESSING"}' | jq
 
 
 echo "=== GET ISSUE #1 STATUS ==="
 
-curl -s $API/issues/$ISSUE1_ID/status | jq
+curl -s $API/api/issues/$ISSUE1_ID/status | jq
 
 
 echo "=== ADD SECOND COMMENT TO ISSUE #1 ==="
 
-curl -s -X POST $API/issues/$ISSUE1_ID/comments \
+curl -s -X POST $API/api/issues/$ISSUE1_ID/comments \
   -H "content-type: application/json" \
   -d '{
     "author": "charlie",
@@ -60,14 +60,14 @@ curl -s -X POST $API/issues/$ISSUE1_ID/comments \
 
 echo "=== CLOSE ISSUE #1 MANUALLY (FINISHED) ==="
 
-curl -s -X POST $API/issues/$ISSUE1_ID/status \
+curl -s -X POST $API/api/issues/$ISSUE1_ID/status \
   -H "content-type: application/json" \
   -d '{"status":"FINISHED"}' | jq
 
 
 echo "=== CREATE ISSUE #2 (will be batch-closed) ==="
 
-ISSUE2_RESPONSE=$(curl -s -X POST $API/issues \
+ISSUE2_RESPONSE=$(curl -s -X POST $API/api/issues \
   -H "content-type: application/json" \
   -d "{
     \"author\": \"alice\",
@@ -82,7 +82,7 @@ echo "ISSUE2_ID=$ISSUE2_ID"
 
 echo "=== CREATE ISSUE #3 (will be batch-closed) ==="
 
-ISSUE3_RESPONSE=$(curl -s -X POST $API/issues \
+ISSUE3_RESPONSE=$(curl -s -X POST $API/api/issues \
   -H "content-type: application/json" \
   -d "{
     \"author\": \"alice\",
@@ -97,31 +97,31 @@ echo "ISSUE3_ID=$ISSUE3_ID"
 
 echo "=== GET ISSUE #2 STATUS BEFORE PROJECT CLOSE ==="
 
-curl -s $API/issues/$ISSUE2_ID/status | jq
+curl -s $API/api/issues/$ISSUE2_ID/status | jq
 
 
 echo "=== GET ISSUE #3 STATUS BEFORE PROJECT CLOSE ==="
 
-curl -s $API/issues/$ISSUE3_ID/status | jq
+curl -s $API/api/issues/$ISSUE3_ID/status | jq
 
 
 echo "=== CHANGE PROJECT STATUS TO DEPRECATED ==="
 
-curl -s -X POST $API/projects/$PROJECT_ID/status \
+curl -s -X POST $API/api/projects/$PROJECT_ID/status \
   -H "content-type: application/json" \
   -d '{"status":"DEPRECATED"}' | jq
 
 
 echo "=== DEACTIVATE PROJECT (BATCH CLOSE ISSUES #2 and #3) ==="
 
-curl -s -X POST $API/projects/$PROJECT_ID/status \
+curl -s -X POST $API/api/projects/$PROJECT_ID/status \
   -H "content-type: application/json" \
   -d '{"status":"INACTIVE"}' | jq
 
 
 echo "=== GET PROJECT STATE AFTER DEACTIVATION ==="
 
-curl -s $API/projects/$PROJECT_ID | jq
+curl -s $API/api/projects/$PROJECT_ID | jq
 
 
 echo ""
@@ -129,21 +129,21 @@ echo "=== VERIFICATION: CHECK ALL ISSUE STATUSES ==="
 echo ""
 
 echo "ISSUE #1 STATUS (should be FINISHED):"
-curl -s $API/issues/$ISSUE1_ID/status | jq
+curl -s $API/api/issues/$ISSUE1_ID/status | jq
 
 echo ""
 echo "ISSUE #2 STATUS (should be REJECTED due to batch operation):"
-curl -s $API/issues/$ISSUE2_ID/status | jq
+curl -s $API/api/issues/$ISSUE2_ID/status | jq
 
 echo ""
 echo "ISSUE #3 STATUS (should be REJECTED due to batch operation):"
-curl -s $API/issues/$ISSUE3_ID/status | jq
+curl -s $API/api/issues/$ISSUE3_ID/status | jq
 
 
 echo ""
 echo "=== REACTIVATE PROJECT ==="
 
-curl -s -X POST $API/projects/$PROJECT_ID/status \
+curl -s -X POST $API/api/projects/$PROJECT_ID/status \
   -H "content-type: application/json" \
   -d '{"status":"ACTIVE"}' | jq
 

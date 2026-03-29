@@ -25,6 +25,11 @@ const client = new Client({
 const app = express();
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
 function isValidUUID(id: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(id);
@@ -46,7 +51,7 @@ ISSUES ENDPOINTS
 ────────────────────────────
 */
 
-app.post('/issues', async (req, res) => {
+app.post('/api/issues', async (req, res) => {
 
   const body = req.body;
   
@@ -75,13 +80,24 @@ app.post('/issues', async (req, res) => {
     args: [req.body]
   });
 
+  try {
+    await pool.query(
+      `INSERT INTO issues (id, title, author, project_id, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [id, body.title, body.author, body.projectId, 'OPEN']
+    );
+    console.log(`Issue ${id} saved to database`);
+  } catch (error) {
+    console.error('Error saving issue to DB:', error);
+  }
+
   res.json({
     id,
     workflowId
   });
 });
 
-app.get('/issues', async (req, res) => {
+app.get('/api/issues', async (req, res) => {
   const pageResult = parseIntParam(req.query.page as string, 1);
   const limitResult = parseIntParam(req.query.limit as string, 20);
   const sortBy = req.query.sortBy as string | undefined;
@@ -129,7 +145,7 @@ app.get('/issues', async (req, res) => {
   }
 });
 
-app.post('/issues/:id/comments', async (req, res) => {
+app.post('/api/issues/:id/comments', async (req, res) => {
 
   if (!isValidUUID(req.params.id)) {
     return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
@@ -161,7 +177,7 @@ app.post('/issues/:id/comments', async (req, res) => {
   }
 });
 
-app.post('/issues/:id/status', async (req, res) => {
+app.post('/api/issues/:id/status', async (req, res) => {
 
   if (!isValidUUID(req.params.id)) {
     return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
@@ -190,7 +206,7 @@ app.post('/issues/:id/status', async (req, res) => {
   }
 });
 
-app.get('/issues/:id/status', async (req, res) => {
+app.get('/api/issues/:id/status', async (req, res) => {
 
   if (!isValidUUID(req.params.id)) {
     return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
@@ -209,7 +225,7 @@ app.get('/issues/:id/status', async (req, res) => {
   }
 });
 
-app.get('/issues/:id/comments', async (req, res) => {
+app.get('/api/issues/:id/comments', async (req, res) => {
 
   if (!isValidUUID(req.params.id)) {
     return res.status(404).json({ error: 'Not Found', message: 'Issue not found' });
@@ -234,9 +250,10 @@ PROJECTS ENDPOINTS
 ────────────────────────────
 */
 
-app.post('/projects', async (req, res) => {
+app.post('/api/projects', async (req, res) => {
 
   const id = uuidv4();
+  const name = req.body?.name?.trim() || 'New Project';
 
   await client.workflow.start('projectWorkflow', {
     workflowId: projectWorkflowPrefix(id),
@@ -249,7 +266,7 @@ app.post('/projects', async (req, res) => {
       `INSERT INTO projects (id, name, status, created_at, updated_at)
        VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
        ON CONFLICT (id) DO NOTHING`,
-      [id, 'New Project', 'ACTIVE']
+      [id, name, 'ACTIVE']
     );
   } catch (error) {
     console.error('Error saving project to DB:', error);
@@ -257,11 +274,12 @@ app.post('/projects', async (req, res) => {
 
   res.json({
     id,
-    workflowId: projectWorkflowPrefix(id)
+    workflowId: projectWorkflowPrefix(id),
+    name
   });
 });
 
-app.get('/projects', async (req, res) => {
+app.get('/api/projects', async (req, res) => {
   const pageResult = parseIntParam(req.query.page as string, 1);
   const limitResult = parseIntParam(req.query.limit as string, 20);
   const sortBy = req.query.sortBy as string | undefined;
@@ -305,7 +323,7 @@ app.get('/projects', async (req, res) => {
   }
 });
 
-app.get('/projects/:id', async (req, res) => {
+app.get('/api/projects/:id', async (req, res) => {
 
   if (!isValidUUID(req.params.id)) {
     return res.status(404).json({ error: 'Not Found', message: 'Project not found' });
@@ -325,7 +343,7 @@ app.get('/projects/:id', async (req, res) => {
   }
 });
 
-app.post('/projects/:id/status', async (req, res) => {
+app.post('/api/projects/:id/status', async (req, res) => {
 
   if (!isValidUUID(req.params.id)) {
     return res.status(404).json({ error: 'Not Found', message: 'Project not found' });
@@ -353,5 +371,13 @@ app.post('/projects/:id/status', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error', message: 'Error updating project status' });
   }
 });
+
+const PORT = process.env.PORT || 3000;
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`API Server running on http://localhost:${PORT}`);
+  });
+}
 
 export { app };

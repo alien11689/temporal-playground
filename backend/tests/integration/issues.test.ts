@@ -35,18 +35,18 @@ afterAll(async () => {
 });
 
 async function createProject(): Promise<string> {
-  const projectResponse = await request(app).post('/projects');
+  const projectResponse = await request(app).post('/api/projects');
   return projectResponse.body.id;
 }
 
-describe('POST /issues', () => {
+describe('POST /api/issues', () => {
 
   describe('success cases', () => {
     it('creates issue with valid data', async () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -62,7 +62,7 @@ describe('POST /issues', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -77,7 +77,7 @@ describe('POST /issues', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -91,7 +91,7 @@ describe('POST /issues', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -109,7 +109,7 @@ describe('POST /issues', () => {
       const projectId = await createProject();
 
       const response = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           author: 'test@example.com',
           projectId
@@ -122,7 +122,7 @@ describe('POST /issues', () => {
       const projectId = await createProject();
 
       const response = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           projectId
@@ -133,7 +133,7 @@ describe('POST /issues', () => {
 
     it('returns 400 when projectId is missing', async () => {
       const response = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com'
@@ -144,7 +144,7 @@ describe('POST /issues', () => {
 
     it('returns 400 when body is empty object', async () => {
       const response = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({});
 
       expect(response.status).toBe(400);
@@ -156,7 +156,7 @@ describe('POST /issues', () => {
       const projectId = await createProject();
 
       const response = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -172,7 +172,7 @@ describe('POST /issues', () => {
       const longTitle = 'A'.repeat(1000);
 
       const response = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: longTitle,
           author: 'test@example.com',
@@ -186,7 +186,7 @@ describe('POST /issues', () => {
       const projectId = await createProject();
 
       const response = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test <script>alert("xss")</script> Issue',
           author: 'test@example.com',
@@ -200,7 +200,7 @@ describe('POST /issues', () => {
       const projectId = await createProject();
 
       const response = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Тестовая задача 日本語',
           author: 'test@example.com',
@@ -212,14 +212,14 @@ describe('POST /issues', () => {
   });
 });
 
-describe('GET /issues', () => {
+describe('GET /api/issues', () => {
 
   describe('pagination', () => {
     it('returns paginated results with correct structure', async () => {
       await createProject();
 
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ page: 1, limit: 10 });
 
       expect(response.status).toBe(200);
@@ -235,7 +235,7 @@ describe('GET /issues', () => {
 
     it('returns empty data array when no issues', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ page: 999, limit: 10 });
 
       expect(response.status).toBe(200);
@@ -244,7 +244,7 @@ describe('GET /issues', () => {
 
     it('calculates totalPages correctly', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ page: 1, limit: 10 });
 
       expect(response.status).toBe(200);
@@ -253,7 +253,7 @@ describe('GET /issues', () => {
 
     it('returns 400 for invalid page', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ page: 'abc' });
 
       expect(response.status).toBe(400);
@@ -263,7 +263,7 @@ describe('GET /issues', () => {
 
     it('returns 400 for invalid limit', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ limit: 'xyz' });
 
       expect(response.status).toBe(400);
@@ -277,7 +277,7 @@ describe('GET /issues', () => {
       const projectId = await createProject();
 
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ projectId });
 
       expect(response.status).toBe(200);
@@ -286,7 +286,7 @@ describe('GET /issues', () => {
 
     it('filters by status OPEN', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ status: 'OPEN' });
 
       expect(response.status).toBe(200);
@@ -295,7 +295,7 @@ describe('GET /issues', () => {
 
     it('filters by status IN_PROGRESS', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ status: 'IN_PROGRESS' });
 
       expect(response.status).toBe(200);
@@ -304,7 +304,7 @@ describe('GET /issues', () => {
 
     it('filters by status CLOSED', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ status: 'CLOSED' });
 
       expect(response.status).toBe(200);
@@ -313,7 +313,7 @@ describe('GET /issues', () => {
 
     it('filters by author', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ author: 'test@example.com' });
 
       expect(response.status).toBe(200);
@@ -324,7 +324,7 @@ describe('GET /issues', () => {
       const projectId = await createProject();
 
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ projectId, status: 'OPEN' });
 
       expect(response.status).toBe(200);
@@ -333,7 +333,7 @@ describe('GET /issues', () => {
 
     it('returns empty when no issues match filters', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ status: 'NONEXISTENT' });
 
       expect(response.status).toBe(200);
@@ -344,7 +344,7 @@ describe('GET /issues', () => {
   describe('sorting', () => {
     it('sorts by created_at DESC by default', async () => {
       const response = await request(app)
-        .get('/issues');
+        .get('/api/issues');
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body.data)).toBe(true);
@@ -352,7 +352,7 @@ describe('GET /issues', () => {
 
     it('sorts by title', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ sortBy: 'title' });
 
       expect(response.status).toBe(200);
@@ -360,7 +360,7 @@ describe('GET /issues', () => {
 
     it('sorts by updated_at', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ sortBy: 'updated_at' });
 
       expect(response.status).toBe(200);
@@ -368,7 +368,7 @@ describe('GET /issues', () => {
 
     it('sorts by status', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ sortBy: 'status' });
 
       expect(response.status).toBe(200);
@@ -376,7 +376,7 @@ describe('GET /issues', () => {
 
     it('returns 400 for invalid sortBy', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ sortBy: 'invalid_column' });
 
       expect(response.status).toBe(400);
@@ -388,7 +388,7 @@ describe('GET /issues', () => {
   describe('edge cases', () => {
     it('handles empty string filter values', async () => {
       const response = await request(app)
-        .get('/issues')
+        .get('/api/issues')
         .query({ author: '' });
 
       expect(response.status).toBe(200);
@@ -397,14 +397,14 @@ describe('GET /issues', () => {
   });
 });
 
-describe('GET /issues/:id/status', () => {
+describe('GET /api/issues/:id/status', () => {
 
   describe('success cases', () => {
     it('returns status for valid issue', async () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -414,7 +414,7 @@ describe('GET /issues/:id/status', () => {
       const issueId = issueResponse.body.id;
 
       const statusResponse = await request(app)
-        .get(`/issues/${issueId}/status`);
+        .get(`/api/issues/${issueId}/status`);
 
       expect(statusResponse.status).toBe(200);
       expect(statusResponse.body.status).toBeDefined();
@@ -424,7 +424,7 @@ describe('GET /issues/:id/status', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -434,7 +434,7 @@ describe('GET /issues/:id/status', () => {
       const issueId = issueResponse.body.id;
 
       const statusResponse = await request(app)
-        .get(`/issues/${issueId}/status`);
+        .get(`/api/issues/${issueId}/status`);
 
       expect(statusResponse.status).toBe(200);
       expect(statusResponse.body.status).toBe('OPEN');
@@ -445,7 +445,7 @@ describe('GET /issues/:id/status', () => {
     it('returns 404 for non-existent issue', async () => {
       const fakeUuid = '00000000-0000-0000-0000-000000000000';
       const response = await request(app)
-        .get(`/issues/${fakeUuid}/status`);
+        .get(`/api/issues/${fakeUuid}/status`);
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Not Found');
@@ -454,7 +454,7 @@ describe('GET /issues/:id/status', () => {
 
     it('returns 404 for malformed UUID', async () => {
       const response = await request(app)
-        .get('/issues/not-a-valid-uuid/status');
+        .get('/api/issues/not-a-valid-uuid/status');
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Not Found');
@@ -463,14 +463,14 @@ describe('GET /issues/:id/status', () => {
   });
 });
 
-describe('POST /issues/:id/status', () => {
+describe('POST /api/issues/:id/status', () => {
 
   describe('success cases', () => {
     it('updates status to IN_PROGRESS', async () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -480,7 +480,7 @@ describe('POST /issues/:id/status', () => {
       const issueId = issueResponse.body.id;
 
       const updateResponse = await request(app)
-        .post(`/issues/${issueId}/status`)
+        .post(`/api/issues/${issueId}/status`)
         .send({ status: 'IN_PROGRESS' });
 
       expect(updateResponse.status).toBe(200);
@@ -491,7 +491,7 @@ describe('POST /issues/:id/status', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -501,7 +501,7 @@ describe('POST /issues/:id/status', () => {
       const issueId = issueResponse.body.id;
 
       const updateResponse = await request(app)
-        .post(`/issues/${issueId}/status`)
+        .post(`/api/issues/${issueId}/status`)
         .send({ status: 'CLOSED' });
 
       expect(updateResponse.status).toBe(200);
@@ -512,7 +512,7 @@ describe('POST /issues/:id/status', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -522,7 +522,7 @@ describe('POST /issues/:id/status', () => {
       const issueId = issueResponse.body.id;
 
       const updateResponse = await request(app)
-        .post(`/issues/${issueId}/status`)
+        .post(`/api/issues/${issueId}/status`)
         .send({ status: 'IN_PROGRESS' });
 
       expect(updateResponse.status).toBe(200);
@@ -534,7 +534,7 @@ describe('POST /issues/:id/status', () => {
     it('returns 404 for non-existent issue', async () => {
       const fakeUuid = '00000000-0000-0000-0000-000000000000';
       const response = await request(app)
-        .post(`/issues/${fakeUuid}/status`)
+        .post(`/api/issues/${fakeUuid}/status`)
         .send({ status: 'IN_PROGRESS' });
 
       expect(response.status).toBe(404);
@@ -544,7 +544,7 @@ describe('POST /issues/:id/status', () => {
 
     it('returns 404 for malformed UUID', async () => {
       const response = await request(app)
-        .post('/issues/not-a-valid-uuid/status')
+        .post('/api/issues/not-a-valid-uuid/status')
         .send({ status: 'IN_PROGRESS' });
 
       expect(response.status).toBe(404);
@@ -556,7 +556,7 @@ describe('POST /issues/:id/status', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -566,7 +566,7 @@ describe('POST /issues/:id/status', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/status`)
+        .post(`/api/issues/${issueId}/status`)
         .send({});
 
       expect(response.status).toBe(400);
@@ -578,7 +578,7 @@ describe('POST /issues/:id/status', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -588,7 +588,7 @@ describe('POST /issues/:id/status', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/status`)
+        .post(`/api/issues/${issueId}/status`)
         .send({ status: '' });
 
       expect(response.status).toBe(400);
@@ -600,7 +600,7 @@ describe('POST /issues/:id/status', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -610,7 +610,7 @@ describe('POST /issues/:id/status', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/status`)
+        .post(`/api/issues/${issueId}/status`)
         .send({ status: null });
 
       expect(response.status).toBe(400);
@@ -619,14 +619,14 @@ describe('POST /issues/:id/status', () => {
   });
 });
 
-describe('POST /issues/:id/comments', () => {
+describe('POST /api/issues/:id/comments', () => {
 
   describe('success cases', () => {
     it('adds comment with valid data', async () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -636,7 +636,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter@example.com',
           message: 'Test comment'
@@ -649,7 +649,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -659,21 +659,21 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter1@example.com',
           message: 'First comment'
         });
 
       await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter2@example.com',
           message: 'Second comment'
         });
 
       const commentsResponse = await request(app)
-        .get(`/issues/${issueId}/comments`);
+        .get(`/api/issues/${issueId}/comments`);
 
       expect(commentsResponse.status).toBe(200);
     });
@@ -682,7 +682,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -692,21 +692,21 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter1@example.com',
           message: 'Comment 1'
         });
 
       await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter2@example.com',
           message: 'Comment 2'
         });
 
       const commentsResponse = await request(app)
-        .get(`/issues/${issueId}/comments`);
+        .get(`/api/issues/${issueId}/comments`);
 
       expect(commentsResponse.body.comments.length).toBe(2);
     });
@@ -717,7 +717,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -727,7 +727,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           message: 'Test comment'
         });
@@ -741,7 +741,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -751,7 +751,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter@example.com'
         });
@@ -765,7 +765,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -775,7 +775,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({});
 
       expect(response.status).toBe(400);
@@ -787,7 +787,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -797,7 +797,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: '',
           message: 'Test comment'
@@ -812,7 +812,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -822,7 +822,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter@example.com',
           message: ''
@@ -839,7 +839,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -850,7 +850,7 @@ describe('POST /issues/:id/comments', () => {
       const longMessage = 'A'.repeat(10000);
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter@example.com',
           message: longMessage
@@ -863,7 +863,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -873,7 +873,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter@example.com',
           message: 'Message with <special> chars & symbols'
@@ -886,7 +886,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -896,7 +896,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter@example.com',
           message: 'Комментарий 日本語 émojis 🎉'
@@ -909,7 +909,7 @@ describe('POST /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -919,7 +919,7 @@ describe('POST /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: null,
           message: null
@@ -933,7 +933,7 @@ describe('POST /issues/:id/comments', () => {
     it('returns 404 for non-existent issue', async () => {
       const fakeUuid = '00000000-0000-0000-0000-000000000000';
       const response = await request(app)
-        .post(`/issues/${fakeUuid}/comments`)
+        .post(`/api/issues/${fakeUuid}/comments`)
         .send({
           author: 'commenter@example.com',
           message: 'Test comment'
@@ -946,7 +946,7 @@ describe('POST /issues/:id/comments', () => {
 
     it('returns 404 for malformed UUID', async () => {
       const response = await request(app)
-        .post('/issues/not-a-valid-uuid/comments')
+        .post('/api/issues/not-a-valid-uuid/comments')
         .send({
           author: 'commenter@example.com',
           message: 'Test comment'
@@ -959,14 +959,14 @@ describe('POST /issues/:id/comments', () => {
   });
 });
 
-describe('GET /issues/:id/comments', () => {
+describe('GET /api/issues/:id/comments', () => {
 
   describe('success cases', () => {
     it('returns empty array for issue with no comments', async () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -976,7 +976,7 @@ describe('GET /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       const response = await request(app)
-        .get(`/issues/${issueId}/comments`);
+        .get(`/api/issues/${issueId}/comments`);
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body.comments)).toBe(true);
@@ -986,7 +986,7 @@ describe('GET /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -996,21 +996,21 @@ describe('GET /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter1@example.com',
           message: 'First comment'
         });
 
       await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter2@example.com',
           message: 'Second comment'
         });
 
       const response = await request(app)
-        .get(`/issues/${issueId}/comments`);
+        .get(`/api/issues/${issueId}/comments`);
 
       expect(response.status).toBe(200);
       expect(response.body.comments.length).toBe(2);
@@ -1020,7 +1020,7 @@ describe('GET /issues/:id/comments', () => {
       const projectId = await createProject();
 
       const issueResponse = await request(app)
-        .post('/issues')
+        .post('/api/issues')
         .send({
           title: 'Test Issue',
           author: 'test@example.com',
@@ -1030,14 +1030,14 @@ describe('GET /issues/:id/comments', () => {
       const issueId = issueResponse.body.id;
 
       await request(app)
-        .post(`/issues/${issueId}/comments`)
+        .post(`/api/issues/${issueId}/comments`)
         .send({
           author: 'commenter@example.com',
           message: 'Test comment'
         });
 
       const response = await request(app)
-        .get(`/issues/${issueId}/comments`);
+        .get(`/api/issues/${issueId}/comments`);
 
       expect(response.status).toBe(200);
       expect(response.body.comments.length).toBeGreaterThan(0);
@@ -1050,7 +1050,7 @@ describe('GET /issues/:id/comments', () => {
     it('returns 404 for non-existent issue', async () => {
       const fakeUuid = '00000000-0000-0000-0000-000000000000';
       const response = await request(app)
-        .get(`/issues/${fakeUuid}/comments`);
+        .get(`/api/issues/${fakeUuid}/comments`);
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Not Found');
@@ -1059,7 +1059,7 @@ describe('GET /issues/:id/comments', () => {
 
     it('returns 404 for malformed UUID', async () => {
       const response = await request(app)
-        .get('/issues/not-a-valid-uuid/comments');
+        .get('/api/issues/not-a-valid-uuid/comments');
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Not Found');
