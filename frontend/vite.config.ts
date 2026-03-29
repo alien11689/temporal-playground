@@ -9,15 +9,13 @@ export default defineConfig({
     port: 8081,
     host: '0.0.0.0',
     proxy: {
-      '/projects': {
+      '/api/projects': {
         target: 'http://localhost:3000',
-        changeOrigin: true,
-        rewrite: (path) => `/api${path}`
+        changeOrigin: true
       },
-      '/issues': {
+      '/api/issues': {
         target: 'http://localhost:3000',
-        changeOrigin: true,
-        rewrite: (path) => `/api${path}`
+        changeOrigin: true
       }
     }
   }
